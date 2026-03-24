@@ -1,15 +1,18 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Spend Limit Wallet API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: wallets
+    description: Wallet management
+  - name: transactions
+    description: Transaction operations
 paths:
   /healthz:
     get:
@@ -24,6 +27,137 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /wallets:
+    post:
+      operationId: createWallet
+      tags: [wallets]
+      summary: Create a new wallet
+      description: Creates a new spend limit wallet with a daily cap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWalletRequest"
+      responses:
+        "201":
+          description: Wallet created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /wallets/{walletId}:
+    get:
+      operationId: getWallet
+      tags: [wallets]
+      summary: Get wallet details
+      description: Returns wallet status including current state, spent amount, and window info
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Wallet details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletStatus"
+        "404":
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /wallets/{walletId}/spend:
+    post:
+      operationId: spendFromWallet
+      tags: [wallets]
+      summary: Attempt a spend
+      description: Attempts to spend from the wallet. Fails if it would exceed the daily limit.
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpendRequest"
+      responses:
+        "200":
+          description: Spend result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpendResult"
+        "400":
+          description: Spend rejected (limit exceeded or invalid)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpendResult"
+        "404":
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /wallets/{walletId}/transactions:
+    get:
+      operationId: getTransactions
+      tags: [transactions]
+      summary: Get transaction history
+      description: Returns all transactions for a wallet
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionList"
+        "404":
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /wallets:
+    get:
+      operationId: listWallets
+      tags: [wallets]
+      summary: List all wallets
+      description: Returns all wallets
+      responses:
+        "200":
+          description: Wallet list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletList"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +168,189 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message
+
+    WalletState:
+      type: string
+      enum:
+        - IDLE
+        - ACTIVE
+        - LOCKED
+      description: >
+        IDLE: No spending in the current window.
+        ACTIVE: Spending has occurred but limit not reached.
+        LOCKED: Daily limit reached, no more spending until window resets.
+
+    CreateWalletRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Human-readable wallet name
+        dailyLimitEth:
+          type: number
+          description: Daily spend limit in ETH (simulated)
+        windowHours:
+          type: number
+          description: Time window in hours (default 24)
+          default: 24
+      required:
+        - name
+        - dailyLimitEth
+
+    Wallet:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        dailyLimitEth:
+          type: number
+        windowHours:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - dailyLimitEth
+        - windowHours
+        - createdAt
+
+    WalletStatus:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        dailyLimitEth:
+          type: number
+        windowHours:
+          type: number
+        state:
+          $ref: "#/components/schemas/WalletState"
+        spentThisPeriodEth:
+          type: number
+          description: Amount spent in the current window
+        remainingEth:
+          type: number
+          description: Amount remaining before limit is hit
+        windowStartsAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the current spending window started (null if IDLE)
+        windowResetsAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the window resets (null if IDLE)
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - dailyLimitEth
+        - windowHours
+        - state
+        - spentThisPeriodEth
+        - remainingEth
+        - windowStartsAt
+        - windowResetsAt
+        - createdAt
+
+    SpendRequest:
+      type: object
+      properties:
+        amountEth:
+          type: number
+          description: Amount to spend in ETH
+        description:
+          type: string
+          description: Description of the spend (e.g., "NFT purchase")
+      required:
+        - amountEth
+        - description
+
+    SpendResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        transactionId:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          description: Human-readable result message
+        walletStatus:
+          $ref: "#/components/schemas/WalletStatus"
+      required:
+        - success
+        - transactionId
+        - reason
+        - walletStatus
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        walletId:
+          type: string
+        amountEth:
+          type: number
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+            - APPROVED
+            - REJECTED
+        rejectionReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - walletId
+        - amountEth
+        - description
+        - status
+        - rejectionReason
+        - createdAt
+
+    TransactionList:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+      required:
+        - transactions
+
+    WalletList:
+      type: object
+      properties:
+        wallets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Wallet"
+      required:
+        - wallets
