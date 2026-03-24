@@ -2,7 +2,7 @@
 
 ## Overview
 
-A fully on-chain **Spend Limit Wallet** dapp with a real Solidity smart contract. The contract enforces a rolling time-window spending cap (e.g. 1 ETH per 24 hours) and implements a three-state machine: **IDLE → ACTIVE → LOCKED**.
+A fully on-chain **Spend Limit Wallet** dapp with a real Solidity smart contract. The contract enforces a rolling time-window spending cap (e.g. 1 tRBTC per 24 hours) and implements a three-state machine: **IDLE → ACTIVE → LOCKED**. Deployed and tested on **Rootstock Testnet** (Chain ID: 31).
 
 ## Stack
 
@@ -24,8 +24,8 @@ A fully on-chain **Spend Limit Wallet** dapp with a real Solidity smart contract
 │   └── spend-limit-wallet/  # React dapp frontend
 │       └── src/
 │           ├── lib/
-│           │   ├── wagmi.ts         # wagmi config (Hardhat localhost chain)
-│           │   ├── contract.ts      # SpendLimitWallet ABI + default address
+│           │   ├── wagmi.ts         # wagmi config (rootstockTestnet)
+│           │   ├── contract.ts      # SpendLimitWallet ABI + optional address
 │           │   └── deployment.json  # Written by deploy script
 │           ├── pages/Dashboard.tsx  # Main dapp UI
 │           └── App.tsx
@@ -34,7 +34,7 @@ A fully on-chain **Spend Limit Wallet** dapp with a real Solidity smart contract
 │       ├── contracts/
 │       │   └── SpendLimitWallet.sol
 │       ├── scripts/
-│       │   └── deploy.js    # Deploy to localhost, saves deployment.json
+│       │   └── deploy.js    # Network-aware deploy script
 │       └── hardhat.config.js
 ```
 
@@ -57,38 +57,36 @@ A fully on-chain **Spend Limit Wallet** dapp with a real Solidity smart contract
 ### Events
 - `SpendApproved` — successful spend executed
 - `SpendRejected` — spend blocked by limit
-- `Deposited` — ETH received
+- `Deposited` — tRBTC received
 - `WindowReset` — spending window expired and reset
 
-## Running the DApp
+## Deploying to Rootstock Testnet
 
-### 1. Start the Hardhat node (already configured as a workflow)
-```bash
-pnpm --filter @workspace/contracts run node
-```
+### 1. Get testnet tRBTC
+Visit https://faucet.rootstock.io to receive free testnet tokens.
 
 ### 2. Deploy the contract
 ```bash
-pnpm --filter @workspace/contracts run deploy:local
+PRIVATE_KEY=0x<your_private_key> pnpm --filter @workspace/contracts run deploy:testnet
 ```
+The script prints the contract address — paste it into the dapp or set `VITE_WALLET_ADDRESS`.
 
 ### 3. Configure MetaMask
-- **RPC URL**: http://localhost:8545
-- **Chain ID**: 31337
-- **Currency**: ETH
-- Import a test private key from the Hardhat node output (Account #0 is the owner)
+- **Network**: Rootstock Testnet
+- **RPC URL**: https://public-node.testnet.rsk.co
+- **Chain ID**: 31
+- **Currency**: tRBTC
+- **Explorer**: https://explorer.testnet.rootstock.io
 
-## Deployed Contract
+## Contract Address
 
-- **Address**: `0x5FbDB2315678afecb367f032d93F642f64180aa3` (deterministic on fresh Hardhat node)
-- **Daily limit**: 1 ETH
-- **Window**: 24 hours
-- **Initial funding**: 2 ETH (seeded by deploy script)
+Set `VITE_WALLET_ADDRESS=0x<address>` in the environment or paste it into the contract address field in the dapp. The dapp reads `import.meta.env.VITE_WALLET_ADDRESS` at build time and falls back to a runtime input field.
 
-## Re-deploy
+## Local Development (optional)
 
-If the Hardhat node restarts, redeploy with:
+For local testing, you can still use the Hardhat node:
 ```bash
+pnpm --filter @workspace/contracts run node
 pnpm --filter @workspace/contracts run deploy:local
 ```
-The address will always be `0x5FbDB2315678afecb367f032d93F642f64180aa3` on a fresh node.
+Note: the frontend is configured for Rootstock Testnet. To test locally, also switch `wagmi.ts` back to the `hardhat` chain.

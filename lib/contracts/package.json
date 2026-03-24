@@ -6,6 +6,7 @@
     "compile": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat compile",
     "node": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat node --hostname 0.0.0.0",
     "deploy:local": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run scripts/deploy.js --network localhost",
+    "deploy:testnet": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run scripts/deploy.js --network rskTestnet",
     "test": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat test"
   },
   "devDependencies": {

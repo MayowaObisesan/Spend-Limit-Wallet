@@ -1,11 +1,8 @@
 // ABI for SpendLimitWallet – kept in sync with contracts/SpendLimitWallet.sol
-// After deploying update WALLET_ADDRESS below (or re-run the deploy script).
-
-// Deterministic Hardhat address (first contract deployed by account #0 on a fresh node).
-// Override with VITE_WALLET_ADDRESS env var if you redeploy.
-export const WALLET_ADDRESS: `0x${string}` = (
-  import.meta.env.VITE_WALLET_ADDRESS ?? "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-) as `0x${string}`;
+// Deploy to Rootstock Testnet, then paste the address below or set VITE_WALLET_ADDRESS.
+export const WALLET_ADDRESS: `0x${string}` | undefined = (
+  import.meta.env.VITE_WALLET_ADDRESS ?? undefined
+) as `0x${string}` | undefined;
 
 export const WALLET_ABI = [
   // ── Constructor ────────────────────────────────────────────────────────────

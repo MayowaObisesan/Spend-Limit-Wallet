@@ -9,7 +9,7 @@ import {
   useBalance,
 } from "wagmi";
 import { parseEther, formatEther, isAddress } from "viem";
-import { hardhat } from "wagmi/chains";
+import { rootstockTestnet } from "wagmi/chains";
 import { WALLET_ABI, STATE_LABELS, WALLET_ADDRESS } from "@/lib/contract";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,7 +89,7 @@ function EventRow({ event }: { event: TxEvent }) {
       <div className="flex-1 min-w-0">
         <p className="text-sm text-foreground truncate">{event.description}</p>
         {event.amount && (
-          <p className="text-xs text-muted-foreground mt-0.5">{event.amount} ETH</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{event.amount} tRBTC</p>
         )}
       </div>
       <span className="text-xs text-muted-foreground shrink-0">
@@ -151,7 +151,7 @@ export default function Dashboard() {
 
   const { data: userBalance, refetch: refetchBalance } = useBalance({
     address,
-    chainId: hardhat.id,
+    chainId: rootstockTestnet.id,
     query: { enabled: !!address },
   });
 
@@ -302,7 +302,7 @@ export default function Dashboard() {
   };
 
   // ── Wrong network warning ───────────────────────────────────────────────────
-  const wrongNetwork = isConnected && chain?.id !== hardhat.id;
+  const wrongNetwork = isConnected && chain?.id !== rootstockTestnet.id;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -350,8 +350,8 @@ export default function Dashboard() {
             <div>
               <p className="text-sm font-medium text-destructive">Wrong network</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Switch MetaMask to <strong>Localhost 8545</strong> (Chain ID: 31337). 
-                Make sure the Hardhat node is running.
+                Switch MetaMask to <strong>Rootstock Testnet</strong> (Chain ID: 31).
+                RPC: <code className="bg-destructive/20 rounded px-1">https://public-node.testnet.rsk.co</code>
               </p>
             </div>
           </div>
@@ -368,20 +368,31 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <div className="space-y-2">
-                <p className="font-medium text-foreground">1. Start the Hardhat local node</p>
-                <pre className="bg-muted/50 rounded p-2 text-xs font-mono overflow-x-auto">pnpm --filter @workspace/contracts run node</pre>
+                <p className="font-medium text-foreground">1. Get testnet funds (tRBTC)</p>
+                <p>Visit the Rootstock faucet to receive free testnet tokens:</p>
+                <a
+                  href="https://faucet.rootstock.io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-muted/50 rounded px-2 py-1 text-xs font-mono text-primary hover:underline"
+                >
+                  https://faucet.rootstock.io
+                </a>
               </div>
               <div className="space-y-2">
-                <p className="font-medium text-foreground">2. Deploy the contract</p>
-                <pre className="bg-muted/50 rounded p-2 text-xs font-mono overflow-x-auto">pnpm --filter @workspace/contracts run deploy:local</pre>
+                <p className="font-medium text-foreground">2. Set your private key &amp; deploy</p>
+                <pre className="bg-muted/50 rounded p-2 text-xs font-mono overflow-x-auto whitespace-pre-wrap">{"PRIVATE_KEY=0x... pnpm --filter @workspace/contracts run deploy:testnet"}</pre>
+                <p className="text-xs">Then paste the contract address shown in the shell into the field below.</p>
               </div>
               <div className="space-y-2">
-                <p className="font-medium text-foreground">3. Add Hardhat to MetaMask</p>
-                <p>RPC: <code className="bg-muted/50 rounded px-1">http://localhost:8545</code> · Chain ID: <code className="bg-muted/50 rounded px-1">31337</code> · Currency: ETH</p>
-              </div>
-              <div className="space-y-2">
-                <p className="font-medium text-foreground">4. Import a test account</p>
-                <p>Copy a private key from the Hardhat node output and import it into MetaMask.</p>
+                <p className="font-medium text-foreground">3. Add Rootstock Testnet to MetaMask</p>
+                <div className="bg-muted/50 rounded p-2 text-xs font-mono space-y-0.5">
+                  <p>Network: <span className="text-foreground">Rootstock Testnet</span></p>
+                  <p>RPC: <span className="text-foreground">https://public-node.testnet.rsk.co</span></p>
+                  <p>Chain ID: <span className="text-foreground">31</span></p>
+                  <p>Currency: <span className="text-foreground">tRBTC</span></p>
+                  <p>Explorer: <span className="text-foreground">https://explorer.testnet.rootstock.io</span></p>
+                </div>
               </div>
               <Button className="mt-2" onClick={() => connect({ connector: connectors[0] })}>
                 <Wallet className="w-4 h-4 mr-2" />
@@ -430,22 +441,22 @@ export default function Dashboard() {
                     <StateBadge state={walletState as number | undefined} />
                   </div>
                   <CardDescription className="text-xs">
-                    {duration}h rolling window · {limitEth} ETH daily limit
+                    {duration}h rolling window · {limitEth} tRBTC daily limit
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   {/* Progress bar */}
                   <div>
                     <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                      <span>Spent: {spentEth.toFixed(4)} ETH</span>
-                      <span>Limit: {limitEth.toFixed(4)} ETH</span>
+                      <span>Spent: {spentEth.toFixed(4)} tRBTC</span>
+                      <span>Limit: {limitEth.toFixed(4)} tRBTC</span>
                     </div>
                     <Progress
                       value={Math.min(progress, 100)}
                       className={`h-3 ${walletState === 2 ? "bg-destructive/20" : walletState === 1 ? "bg-accent/20" : "bg-muted"}`}
                     />
                     <p className="text-xs text-muted-foreground mt-1.5">
-                      Remaining: <span className="text-foreground font-medium">{remainingEth.toFixed(4)} ETH</span>
+                      Remaining: <span className="text-foreground font-medium">{remainingEth.toFixed(4)} tRBTC</span>
                     </p>
                   </div>
 
@@ -467,7 +478,7 @@ export default function Dashboard() {
                   {/* Contract balance */}
                   <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-4 py-3">
                     <span className="text-sm text-muted-foreground">Contract Balance</span>
-                    <span className="font-mono font-semibold text-foreground">{balanceEth.toFixed(4)} ETH</span>
+                    <span className="font-mono font-semibold text-foreground">{balanceEth.toFixed(4)} tRBTC</span>
                   </div>
 
                   {/* Owner badge */}
@@ -495,7 +506,7 @@ export default function Dashboard() {
                       Make a Spend
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Transfers ETH from the wallet to a recipient. Blocked if it would exceed the daily cap.
+                      Transfers tRBTC from the wallet to a recipient. Blocked if it would exceed the daily cap.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -507,7 +518,7 @@ export default function Dashboard() {
                     />
                     <div className="flex gap-2">
                       <Input
-                        placeholder="Amount (ETH)"
+                        placeholder="Amount (tRBTC)"
                         type="number"
                         step="0.001"
                         min="0"
@@ -543,18 +554,18 @@ export default function Dashboard() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <ArrowDownLeft className="w-4 h-4 text-accent" />
-                    Deposit ETH
+                    Deposit tRBTC
                   </CardTitle>
                   <CardDescription className="text-xs">
                     Fund the wallet so it can make spends. Anyone can deposit.
                     {userBalance && (
-                      <span className="ml-1 text-foreground">Your balance: {parseFloat(formatEther(userBalance.value)).toFixed(4)} ETH</span>
+                      <span className="ml-1 text-foreground">Your balance: {parseFloat(formatEther(userBalance.value)).toFixed(4)} tRBTC</span>
                     )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex gap-2">
                   <Input
-                    placeholder="Amount (ETH)"
+                    placeholder="Amount (tRBTC)"
                     type="number"
                     step="0.01"
                     min="0"
