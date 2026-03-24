@@ -1,8 +1,8 @@
 // ABI for SpendLimitWallet – kept in sync with contracts/SpendLimitWallet.sol
-// Deploy to Rootstock Testnet, then paste the address below or set VITE_WALLET_ADDRESS.
-export const WALLET_ADDRESS: `0x${string}` | undefined = (
-  import.meta.env.VITE_WALLET_ADDRESS ?? undefined
-) as `0x${string}` | undefined;
+// Deployed on Rootstock Testnet (Chain ID: 31)
+export const WALLET_ADDRESS = (
+  import.meta.env.VITE_WALLET_ADDRESS ?? "0xAf73594271FE4370034fb8938cDFC22e022e75a2"
+) as `0x${string}`;
 
 export const WALLET_ABI = [
   // ── Constructor ────────────────────────────────────────────────────────────

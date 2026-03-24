@@ -111,10 +111,7 @@ export default function Dashboard() {
   const [spendAmount, setSpendAmount] = useState("");
   const [spendDesc, setSpendDesc] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
-  const [contractAddress, setContractAddress] = useState<`0x${string}` | undefined>(
-    isAddress(WALLET_ADDRESS) ? WALLET_ADDRESS : undefined
-  );
-  const [inputAddress, setInputAddress] = useState(WALLET_ADDRESS);
+  const contractAddress = WALLET_ADDRESS;
 
   const addEvent = useCallback((e: Omit<TxEvent, "id">) => {
     setEvents((prev) => [{ ...e, id: `${e.timestamp}-${Math.random()}` }, ...prev].slice(0, 50));
@@ -292,15 +289,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleSetContract = () => {
-    if (isAddress(inputAddress)) {
-      setContractAddress(inputAddress as `0x${string}`);
-      toast({ title: "Contract address set" });
-    } else {
-      toast({ title: "Invalid address", variant: "destructive" });
-    }
-  };
-
   // ── Wrong network warning ───────────────────────────────────────────────────
   const wrongNetwork = isConnected && chain?.id !== rootstockTestnet.id;
 
@@ -357,44 +345,25 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Setup — not connected */}
+        {/* Connect prompt — shown when wallet not connected */}
         {!isConnected && (
           <Card className="mb-6 border-primary/20 bg-card">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <Info className="w-4 h-4 text-primary" />
-                Getting Started
+                <Wallet className="w-4 h-4 text-primary" />
+                Connect your wallet to get started
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <div className="space-y-2">
-                <p className="font-medium text-foreground">1. Get testnet funds (tRBTC)</p>
-                <p>Visit the Rootstock faucet to receive free testnet tokens:</p>
-                <a
-                  href="https://faucet.rootstock.io"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block bg-muted/50 rounded px-2 py-1 text-xs font-mono text-primary hover:underline"
-                >
-                  https://faucet.rootstock.io
-                </a>
+            <CardContent className="space-y-4 text-sm text-muted-foreground">
+              <p>Make sure MetaMask is configured on <strong className="text-foreground">Rootstock Testnet</strong>:</p>
+              <div className="bg-muted/50 rounded p-3 text-xs font-mono space-y-1">
+                <p>Network: <span className="text-foreground">Rootstock Testnet</span></p>
+                <p>RPC: <span className="text-foreground">https://public-node.testnet.rsk.co</span></p>
+                <p>Chain ID: <span className="text-foreground">31</span></p>
+                <p>Currency: <span className="text-foreground">tRBTC</span></p>
+                <p>Explorer: <span className="text-foreground">https://explorer.testnet.rootstock.io</span></p>
               </div>
-              <div className="space-y-2">
-                <p className="font-medium text-foreground">2. Set your private key &amp; deploy</p>
-                <pre className="bg-muted/50 rounded p-2 text-xs font-mono overflow-x-auto whitespace-pre-wrap">{"PRIVATE_KEY=0x... pnpm --filter @workspace/contracts run deploy:testnet"}</pre>
-                <p className="text-xs">Then paste the contract address shown in the shell into the field below.</p>
-              </div>
-              <div className="space-y-2">
-                <p className="font-medium text-foreground">3. Add Rootstock Testnet to MetaMask</p>
-                <div className="bg-muted/50 rounded p-2 text-xs font-mono space-y-0.5">
-                  <p>Network: <span className="text-foreground">Rootstock Testnet</span></p>
-                  <p>RPC: <span className="text-foreground">https://public-node.testnet.rsk.co</span></p>
-                  <p>Chain ID: <span className="text-foreground">31</span></p>
-                  <p>Currency: <span className="text-foreground">tRBTC</span></p>
-                  <p>Explorer: <span className="text-foreground">https://explorer.testnet.rootstock.io</span></p>
-                </div>
-              </div>
-              <Button className="mt-2" onClick={() => connect({ connector: connectors[0] })}>
+              <Button onClick={() => connect({ connector: connectors[0] })}>
                 <Wallet className="w-4 h-4 mr-2" />
                 Connect MetaMask
               </Button>
@@ -402,33 +371,8 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Contract address input */}
-        {isConnected && (
-          <Card className="mb-6 border-border bg-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-muted-foreground font-normal">Contract Address</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <Input
-                  className="font-mono text-sm"
-                  placeholder="0x…"
-                  value={inputAddress}
-                  onChange={(e) => setInputAddress(e.target.value)}
-                />
-                <Button variant="outline" onClick={handleSetContract} className="shrink-0">
-                  Load
-                </Button>
-              </div>
-              {contractAddress && (
-                <p className="text-xs text-accent mt-2 font-mono">✓ Loaded: {contractAddress.slice(0, 10)}…{contractAddress.slice(-8)}</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
         {/* Main grid */}
-        {contractAddress && isConnected && (
+        {isConnected && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* ── Left column: State overview ─────────────────────────────── */}
             <div className="lg:col-span-2 space-y-6">

@@ -1,11 +1,11 @@
 {
-  "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "chainId": 31337,
-  "network": "localhost",
-  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "address": "0xAf73594271FE4370034fb8938cDFC22e022e75a2",
+  "chainId": 31,
+  "network": "rskTestnet",
+  "deployer": "0xC23E1B3DAbb77dF027b4a402d6C33e87117eB5eF",
   "dailyLimitEth": "1.0",
   "windowDurationSeconds": 86400,
-  "deployedAt": "2026-03-24T14:38:52.482Z",
+  "deployedAt": "2026-03-24T16:12:32.990Z",
   "abi": [
     {
       "inputs": [

@@ -23,3 +23,8 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+VITE_WALLET_ADDRESS = "0xAf73594271FE4370034fb8938cDFC22e022e75a2"
