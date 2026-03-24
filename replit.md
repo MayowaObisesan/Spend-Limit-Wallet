@@ -1,96 +1,94 @@
-# Workspace
+# Spend Limit Wallet – DApp
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+A fully on-chain **Spend Limit Wallet** dapp with a real Solidity smart contract. The contract enforces a rolling time-window spending cap (e.g. 1 ETH per 24 hours) and implements a three-state machine: **IDLE → ACTIVE → LOCKED**.
 
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
 - **Node.js version**: 24
 - **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Smart Contract**: Solidity 0.8.20 (`SpendLimitWallet.sol`)
+- **Contract tooling**: Hardhat 2.x + hardhat-ethers
+- **Frontend**: React 19 + Vite 7
+- **Web3 client**: wagmi v3 + viem v2
+- **UI**: Tailwind CSS v4 + shadcn/ui components
+- **Backend**: Express 5 (health endpoint only; no DB needed — state lives on-chain)
 
 ## Structure
 
 ```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+├── artifacts/
+│   ├── api-server/          # Express health endpoint
+│   └── spend-limit-wallet/  # React dapp frontend
+│       └── src/
+│           ├── lib/
+│           │   ├── wagmi.ts         # wagmi config (Hardhat localhost chain)
+│           │   ├── contract.ts      # SpendLimitWallet ABI + default address
+│           │   └── deployment.json  # Written by deploy script
+│           ├── pages/Dashboard.tsx  # Main dapp UI
+│           └── App.tsx
+├── lib/
+│   └── contracts/           # Hardhat project
+│       ├── contracts/
+│       │   └── SpendLimitWallet.sol
+│       ├── scripts/
+│       │   └── deploy.js    # Deploy to localhost, saves deployment.json
+│       └── hardhat.config.js
 ```
 
-## TypeScript & Composite Projects
+## Smart Contract — SpendLimitWallet.sol
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+### State Machine
+| State    | Meaning |
+|----------|---------|
+| `IDLE`   | No spending in the current window (or window expired) |
+| `ACTIVE` | Some spending has occurred but daily limit not yet hit |
+| `LOCKED` | Daily cap reached — no spends until window resets |
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+### Key Functions
+- `spend(address to, uint256 amount, string description)` — owner-only; enforces limit; auto-resets expired window
+- `deposit() payable` — anyone can fund the wallet
+- `getWindowInfo()` — view: returns (spent, remaining, windowEndsAt, state, balance)
+- `updateLimit(uint256 newLimit)` — owner-only; update the daily cap
+- `currentState()` — view: returns the current State enum value
 
-## Root Scripts
+### Events
+- `SpendApproved` — successful spend executed
+- `SpendRejected` — spend blocked by limit
+- `Deposited` — ETH received
+- `WindowReset` — spending window expired and reset
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+## Running the DApp
 
-## Packages
+### 1. Start the Hardhat node (already configured as a workflow)
+```bash
+pnpm --filter @workspace/contracts run node
+```
 
-### `artifacts/api-server` (`@workspace/api-server`)
+### 2. Deploy the contract
+```bash
+pnpm --filter @workspace/contracts run deploy:local
+```
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
+### 3. Configure MetaMask
+- **RPC URL**: http://localhost:8545
+- **Chain ID**: 31337
+- **Currency**: ETH
+- Import a test private key from the Hardhat node output (Account #0 is the owner)
 
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+## Deployed Contract
 
-### `lib/db` (`@workspace/db`)
+- **Address**: `0x5FbDB2315678afecb367f032d93F642f64180aa3` (deterministic on fresh Hardhat node)
+- **Daily limit**: 1 ETH
+- **Window**: 24 hours
+- **Initial funding**: 2 ETH (seeded by deploy script)
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
+## Re-deploy
 
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+If the Hardhat node restarts, redeploy with:
+```bash
+pnpm --filter @workspace/contracts run deploy:local
+```
+The address will always be `0x5FbDB2315678afecb367f032d93F642f64180aa3` on a fresh node.

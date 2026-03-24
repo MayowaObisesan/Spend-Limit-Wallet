@@ -70,7 +70,9 @@ autoInstallPeers: false
 onlyBuiltDependencies:
   - '@swc/core'
   - esbuild
+  - keccak
   - msw
+  - secp256k1
   - unrs-resolver
 
 overrides:

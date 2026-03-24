@@ -73,5 +73,9 @@
     "vite": "catalog:",
     "wouter": "^3.3.5",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "viem": "^2.47.6",
+    "wagmi": "^3.5.0"
   }
 }
