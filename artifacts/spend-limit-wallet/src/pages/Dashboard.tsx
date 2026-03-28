@@ -114,6 +114,8 @@ export default function Dashboard() {
   const [spendAmount, setSpendAmount] = useState("");
   const [spendDesc, setSpendDesc] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
+  const [newLimitAmount, setNewLimitAmount] = useState("");
+  const [transferToAddress, setTransferToAddress] = useState("");
   const contractAddress = WALLET_ADDRESS;
 
   const addEvent = useCallback((e: Omit<TxEvent, "id">) => {
@@ -147,6 +149,13 @@ export default function Dashboard() {
     abi: WALLET_ABI,
     functionName: "windowDuration",
     query: { enabled: !!contractAddress },
+  });
+
+  const { data: pendingOwnerAddress } = useReadContract({
+    address: contractAddress,
+    abi: WALLET_ABI,
+    functionName: "pendingOwner",
+    query: { enabled: !!contractAddress, refetchInterval: 5000 },
   });
 
   const { data: userBalance, refetch: refetchBalance } = useBalance({
@@ -334,7 +343,12 @@ export default function Dashboard() {
 
   const { h, m, s, remaining: secs } = useCountdown(Number(windowEndsAt ?? 0n));
 
-  const isOwner = address && ownerAddress && address.toLowerCase() === (ownerAddress as string).toLowerCase();
+  const isOwner = address && ownerAddress &&
+    address.toLowerCase() === (ownerAddress as string).toLowerCase();
+
+  const isPendingOwner = address && pendingOwnerAddress &&
+    (pendingOwnerAddress as string) !== "0x0000000000000000000000000000000000000000" &&
+    address.toLowerCase() === (pendingOwnerAddress as string).toLowerCase();
 
   // ── Actions ─────────────────────────────────────────────────────────────────
   const handleSpend = async () => {
@@ -372,6 +386,58 @@ export default function Dashboard() {
       setDepositAmount("");
     } catch (e: any) {
       toast({ title: "Deposit failed", description: e.shortMessage ?? e.message, variant: "destructive" });
+    }
+  };
+
+  const handleUpdateLimit = async () => {
+    if (!contractAddress) return;
+    const amt = parseFloat(newLimitAmount);
+    if (!amt || amt <= 0) { toast({ title: "Invalid limit", variant: "destructive" }); return; }
+    try {
+      await writeContract({
+        address: contractAddress,
+        abi: WALLET_ABI,
+        functionName: "updateLimit",
+        args: [parseEther(newLimitAmount)],
+      });
+      toast({ title: "Limit update submitted!" });
+      setNewLimitAmount("");
+    } catch (e: any) {
+      toast({ title: "Update failed", description: e.shortMessage ?? e.message, variant: "destructive" });
+    }
+  };
+
+  const handleTransferOwnership = async () => {
+    if (!contractAddress) return;
+    if (!isAddress(transferToAddress)) {
+      toast({ title: "Invalid address", variant: "destructive" });
+      return;
+    }
+    try {
+      await writeContract({
+        address: contractAddress,
+        abi: WALLET_ABI,
+        functionName: "transferOwnership",
+        args: [transferToAddress as `0x${string}`],
+      });
+      toast({ title: "Transfer initiated — nominee must call Accept Ownership" });
+      setTransferToAddress("");
+    } catch (e: any) {
+      toast({ title: "Transfer failed", description: e.shortMessage ?? e.message, variant: "destructive" });
+    }
+  };
+
+  const handleAcceptOwnership = async () => {
+    if (!contractAddress) return;
+    try {
+      await writeContract({
+        address: contractAddress,
+        abi: WALLET_ABI,
+        functionName: "acceptOwnership",
+      });
+      toast({ title: "Ownership accepted! You are now the owner." });
+    } catch (e: any) {
+      toast({ title: "Accept failed", description: e.shortMessage ?? e.message, variant: "destructive" });
     }
   };
 
@@ -527,6 +593,26 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
+              {/* Accept ownership banner — visible to pending owner */}
+              {isPendingOwner && (
+                <Card className="border-primary/40 bg-primary/10">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-primary" />
+                      Ownership Transfer Pending
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      You have been nominated as the new owner of this wallet. Accept to complete the handover.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button className="w-full" onClick={handleAcceptOwnership} disabled={isTxPending}>
+                      {isTxPending ? "Confirming…" : "Accept Ownership"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Spend form (owner only) */}
               {isOwner && (
                 <Card className="border-border bg-card">
@@ -575,6 +661,79 @@ export default function Dashboard() {
                     >
                       {isTxPending ? "Sending…" : walletState === 2 ? "Wallet LOCKED" : "Submit Spend"}
                     </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Owner controls — update limit + transfer ownership */}
+              {isOwner && (
+                <Card className="border-border bg-card">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-yellow-400" />
+                      Owner Controls
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+
+                    {/* Update daily limit */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-foreground">Update Daily Limit</p>
+                      <p className="text-xs text-muted-foreground">
+                        Current: <span className="text-foreground font-mono">{limitEth} tRBTC</span>.
+                        {" "}If a window is active, the new limit takes effect at the next window.
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="New limit (tRBTC)"
+                          type="number"
+                          step="0.0001"
+                          min="0"
+                          className="text-sm"
+                          value={newLimitAmount}
+                          onChange={(e) => setNewLimitAmount(e.target.value)}
+                        />
+                        <Button variant="outline" onClick={handleUpdateLimit} disabled={isTxPending} className="shrink-0">
+                          Set
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-border" />
+
+                    {/* Transfer ownership */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-foreground">Transfer Ownership</p>
+                      <p className="text-xs text-muted-foreground">
+                        Two-step: nominate a new owner below. They must then connect their wallet and click{" "}
+                        <em>Accept Ownership</em> to complete the transfer.
+                      </p>
+                      {pendingOwnerAddress &&
+                        (pendingOwnerAddress as string) !== "0x0000000000000000000000000000000000000000" && (
+                        <div className="flex items-center gap-2 text-xs text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded px-3 py-2">
+                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                          Pending nominee: <span className="font-mono ml-1">
+                            {(pendingOwnerAddress as string).slice(0, 10)}…{(pendingOwnerAddress as string).slice(-6)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="New owner address (0x…)"
+                          className="font-mono text-sm"
+                          value={transferToAddress}
+                          onChange={(e) => setTransferToAddress(e.target.value)}
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={handleTransferOwnership}
+                          disabled={isTxPending}
+                          className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/10"
+                        >
+                          Nominate
+                        </Button>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               )}
