@@ -1,7 +1,7 @@
 // ABI for SpendLimitWallet – kept in sync with contracts/SpendLimitWallet.sol
 // Deployed on Rootstock Testnet (Chain ID: 31)
 export const WALLET_ADDRESS = (
-  import.meta.env.VITE_WALLET_ADDRESS ?? "0xC749ddF97bf27bAB624C300eC7ad09C8235D8a59"
+  import.meta.env.VITE_WALLET_ADDRESS ?? "0xf6a4CCfFA645488dF53C7A970357144232908d0d"
 ) as `0x${string}`;
 
 export const WALLET_ABI = [
@@ -15,7 +15,7 @@ export const WALLET_ABI = [
     stateMutability: "nonpayable",
   },
 
-  // ── Public state variables (auto-getters) ──────────────────────────────────
+  // ── Public state variable getters ──────────────────────────────────────────
   {
     name: "owner",
     type: "function",
@@ -24,7 +24,21 @@ export const WALLET_ABI = [
     stateMutability: "view",
   },
   {
+    name: "pendingOwner",
+    type: "function",
+    inputs: [],
+    outputs: [{ name: "", type: "address", internalType: "address" }],
+    stateMutability: "view",
+  },
+  {
     name: "dailyLimit",
+    type: "function",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    name: "pendingLimit",
     type: "function",
     inputs: [],
     outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
@@ -90,13 +104,27 @@ export const WALLET_ABI = [
       { name: "amount", type: "uint256", internalType: "uint256" },
       { name: "description", type: "string", internalType: "string" },
     ],
-    outputs: [],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
     stateMutability: "nonpayable",
   },
   {
     name: "updateLimit",
     type: "function",
     inputs: [{ name: "newLimit", type: "uint256", internalType: "uint256" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    name: "transferOwnership",
+    type: "function",
+    inputs: [{ name: "newOwner", type: "address", internalType: "address" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    name: "acceptOwnership",
+    type: "function",
+    inputs: [],
     outputs: [],
     stateMutability: "nonpayable",
   },
@@ -115,6 +143,7 @@ export const WALLET_ABI = [
   {
     name: "Deposited",
     type: "event",
+    anonymous: false,
     inputs: [
       { name: "from", type: "address", indexed: true, internalType: "address" },
       { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
@@ -123,6 +152,7 @@ export const WALLET_ABI = [
   {
     name: "SpendApproved",
     type: "event",
+    anonymous: false,
     inputs: [
       { name: "to", type: "address", indexed: true, internalType: "address" },
       { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
@@ -134,6 +164,7 @@ export const WALLET_ABI = [
   {
     name: "SpendRejected",
     type: "event",
+    anonymous: false,
     inputs: [
       { name: "to", type: "address", indexed: true, internalType: "address" },
       { name: "amount", type: "uint256", indexed: false, internalType: "uint256" },
@@ -144,6 +175,7 @@ export const WALLET_ABI = [
   {
     name: "WindowReset",
     type: "event",
+    anonymous: false,
     inputs: [
       { name: "newWindowStart", type: "uint256", indexed: false, internalType: "uint256" },
       { name: "previousSpent", type: "uint256", indexed: false, internalType: "uint256" },
@@ -152,14 +184,47 @@ export const WALLET_ABI = [
   {
     name: "LimitUpdated",
     type: "event",
+    anonymous: false,
     inputs: [
       { name: "oldLimit", type: "uint256", indexed: false, internalType: "uint256" },
       { name: "newLimit", type: "uint256", indexed: false, internalType: "uint256" },
     ],
   },
+  {
+    name: "LimitUpdateScheduled",
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "currentLimit", type: "uint256", indexed: false, internalType: "uint256" },
+      { name: "newLimit", type: "uint256", indexed: false, internalType: "uint256" },
+      { name: "effectiveAt", type: "uint256", indexed: false, internalType: "uint256" },
+    ],
+  },
+  {
+    name: "OwnershipTransferInitiated",
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "currentOwner", type: "address", indexed: true, internalType: "address" },
+      { name: "pendingOwner", type: "address", indexed: true, internalType: "address" },
+    ],
+  },
+  {
+    name: "OwnershipTransferred",
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "previousOwner", type: "address", indexed: true, internalType: "address" },
+      { name: "newOwner", type: "address", indexed: true, internalType: "address" },
+    ],
+  },
 
   // ── Custom Errors ─────────────────────────────────────────────────────────
   { name: "NotOwner", type: "error", inputs: [] },
+  { name: "NotPendingOwner", type: "error", inputs: [] },
+  { name: "ZeroAddress", type: "error", inputs: [] },
+  { name: "TransferFailed", type: "error", inputs: [] },
+  { name: "WindowTooShort", type: "error", inputs: [] },
   {
     name: "LimitExceeded",
     type: "error",

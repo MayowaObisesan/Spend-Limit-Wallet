@@ -1,11 +1,11 @@
 {
-  "address": "0xC749ddF97bf27bAB624C300eC7ad09C8235D8a59",
+  "address": "0xf6a4CCfFA645488dF53C7A970357144232908d0d",
   "chainId": 31,
   "network": "rskTestnet",
   "deployer": "0xC23E1B3DAbb77dF027b4a402d6C33e87117eB5eF",
   "dailyLimitEth": "1.0",
   "windowDurationSeconds": 86400,
-  "deployedAt": "2026-03-28T19:10:19.138Z",
+  "deployedAt": "2026-03-28T19:43:42.202Z",
   "abi": [
     {
       "inputs": [
@@ -67,6 +67,26 @@
     },
     {
       "inputs": [],
+      "name": "NotPendingOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "TransferFailed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "WindowTooShort",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZeroAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "ZeroAmount",
       "type": "error"
     },
@@ -100,6 +120,31 @@
         {
           "indexed": false,
           "internalType": "uint256",
+          "name": "currentLimit",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newLimit",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "effectiveAt",
+          "type": "uint256"
+        }
+      ],
+      "name": "LimitUpdateScheduled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
           "name": "oldLimit",
           "type": "uint256"
         },
@@ -111,6 +156,44 @@
         }
       ],
       "name": "LimitUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "currentOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "pendingOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferInitiated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
       "type": "event"
     },
     {
@@ -199,6 +282,13 @@
       ],
       "name": "WindowReset",
       "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "acceptOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     },
     {
       "inputs": [],
@@ -293,6 +383,32 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "pendingLimit",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pendingOwner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address payable",
@@ -311,7 +427,13 @@
         }
       ],
       "name": "spend",
-      "outputs": [],
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -326,6 +448,19 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {

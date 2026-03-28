@@ -22,7 +22,7 @@ import { Wallet, Zap, Lock, Clock, ArrowUpRight, ArrowDownLeft, RefreshCw, Alert
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface TxEvent {
   id: string;
-  type: "approved" | "rejected" | "deposited" | "reset";
+  type: "approved" | "rejected" | "deposited" | "reset" | "limitUpdated" | "limitScheduled" | "ownership";
   description: string;
   amount?: string;
   to?: string;
@@ -78,10 +78,13 @@ function StateBadge({ state }: { state: number | undefined }) {
 // ─── Event row ────────────────────────────────────────────────────────────────
 function EventRow({ event }: { event: TxEvent }) {
   const icons: Record<TxEvent["type"], React.ReactNode> = {
-    approved: <CheckCircle2 className="w-4 h-4 text-accent shrink-0 mt-0.5" />,
-    rejected: <XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />,
-    deposited: <ArrowDownLeft className="w-4 h-4 text-primary shrink-0 mt-0.5" />,
-    reset: <RefreshCw className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />,
+    approved:      <CheckCircle2 className="w-4 h-4 text-accent shrink-0 mt-0.5" />,
+    rejected:      <XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />,
+    deposited:     <ArrowDownLeft className="w-4 h-4 text-primary shrink-0 mt-0.5" />,
+    reset:         <RefreshCw className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />,
+    limitUpdated:  <Zap className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />,
+    limitScheduled:<Clock className="w-4 h-4 text-yellow-400/70 shrink-0 mt-0.5" />,
+    ownership:     <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />,
   };
   return (
     <div className="flex items-start gap-3 py-3 border-b border-border last:border-0">
@@ -232,6 +235,80 @@ export default function Dashboard() {
           timestamp: Math.floor(Date.now() / 1000),
         });
         refetchWindowInfo();
+      });
+    },
+  });
+
+  useWatchContractEvent({
+    address: contractAddress,
+    abi: WALLET_ABI,
+    eventName: "LimitUpdated",
+    enabled: !!contractAddress,
+    poll: true,
+    pollingInterval: 3000,
+    onLogs(logs) {
+      logs.forEach((l: any) => {
+        addEvent({
+          type: "limitUpdated",
+          description: `Daily limit changed: ${formatEther(l.args.oldLimit ?? 0n)} → ${formatEther(l.args.newLimit ?? 0n)} tRBTC`,
+          timestamp: Math.floor(Date.now() / 1000),
+        });
+        refetchWindowInfo();
+      });
+    },
+  });
+
+  useWatchContractEvent({
+    address: contractAddress,
+    abi: WALLET_ABI,
+    eventName: "LimitUpdateScheduled",
+    enabled: !!contractAddress,
+    poll: true,
+    pollingInterval: 3000,
+    onLogs(logs) {
+      logs.forEach((l: any) => {
+        const effectiveDate = new Date(Number(l.args.effectiveAt ?? 0n) * 1000).toLocaleTimeString();
+        addEvent({
+          type: "limitScheduled",
+          description: `Limit change to ${formatEther(l.args.newLimit ?? 0n)} tRBTC scheduled — takes effect at next window (${effectiveDate})`,
+          timestamp: Math.floor(Date.now() / 1000),
+        });
+      });
+    },
+  });
+
+  useWatchContractEvent({
+    address: contractAddress,
+    abi: WALLET_ABI,
+    eventName: "OwnershipTransferInitiated",
+    enabled: !!contractAddress,
+    poll: true,
+    pollingInterval: 3000,
+    onLogs(logs) {
+      logs.forEach((l: any) => {
+        addEvent({
+          type: "ownership",
+          description: `Ownership transfer initiated → ${String(l.args.pendingOwner ?? "").slice(0, 10)}…`,
+          timestamp: Math.floor(Date.now() / 1000),
+        });
+      });
+    },
+  });
+
+  useWatchContractEvent({
+    address: contractAddress,
+    abi: WALLET_ABI,
+    eventName: "OwnershipTransferred",
+    enabled: !!contractAddress,
+    poll: true,
+    pollingInterval: 3000,
+    onLogs(logs) {
+      logs.forEach((l: any) => {
+        addEvent({
+          type: "ownership",
+          description: `Ownership transferred to ${String(l.args.newOwner ?? "").slice(0, 10)}…`,
+          timestamp: Math.floor(Date.now() / 1000),
+        });
       });
     },
   });
@@ -394,7 +471,7 @@ export default function Dashboard() {
                     <StateBadge state={walletState as number | undefined} />
                   </div>
                   <CardDescription className="text-xs">
-                    {duration}h rolling window · {limitEth} tRBTC daily limit
+                    {duration}h daily window · {limitEth} tRBTC daily limit
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
