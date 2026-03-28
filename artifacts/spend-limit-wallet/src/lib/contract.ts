@@ -1,7 +1,7 @@
 // ABI for SpendLimitWallet – kept in sync with contracts/SpendLimitWallet.sol
 // Deployed on Rootstock Testnet (Chain ID: 31)
 export const WALLET_ADDRESS = (
-  import.meta.env.VITE_WALLET_ADDRESS ?? "0xAf73594271FE4370034fb8938cDFC22e022e75a2"
+  import.meta.env.VITE_WALLET_ADDRESS ?? "0xC749ddF97bf27bAB624C300eC7ad09C8235D8a59"
 ) as `0x${string}`;
 
 export const WALLET_ABI = [

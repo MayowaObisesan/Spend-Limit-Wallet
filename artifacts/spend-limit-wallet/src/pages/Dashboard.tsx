@@ -161,6 +161,8 @@ export default function Dashboard() {
     abi: WALLET_ABI,
     eventName: "SpendApproved",
     enabled: !!contractAddress,
+    poll: true,
+    pollingInterval: 3000,
     onLogs(logs) {
       logs.forEach((l: any) => {
         addEvent({
@@ -180,6 +182,8 @@ export default function Dashboard() {
     abi: WALLET_ABI,
     eventName: "SpendRejected",
     enabled: !!contractAddress,
+    poll: true,
+    pollingInterval: 3000,
     onLogs(logs) {
       logs.forEach((l: any) => {
         addEvent({
@@ -197,6 +201,8 @@ export default function Dashboard() {
     abi: WALLET_ABI,
     eventName: "Deposited",
     enabled: !!contractAddress,
+    poll: true,
+    pollingInterval: 3000,
     onLogs(logs) {
       logs.forEach((l: any) => {
         addEvent({
@@ -206,6 +212,7 @@ export default function Dashboard() {
           timestamp: Math.floor(Date.now() / 1000),
         });
         refetchWindowInfo();
+        refetchBalance();
       });
     },
   });
@@ -215,11 +222,13 @@ export default function Dashboard() {
     abi: WALLET_ABI,
     eventName: "WindowReset",
     enabled: !!contractAddress,
+    poll: true,
+    pollingInterval: 3000,
     onLogs(logs) {
       logs.forEach((l: any) => {
         addEvent({
           type: "reset",
-          description: `Window reset. Previous spent: ${formatEther(l.args.previousSpent ?? 0n)} ETH`,
+          description: `Window reset. Previous spent: ${formatEther(l.args.previousSpent ?? 0n)} tRBTC`,
           timestamp: Math.floor(Date.now() / 1000),
         });
         refetchWindowInfo();
